@@ -28,12 +28,14 @@ if __name__ == '__main__':
     MLE_params = optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], n_iter = 500, verbose = True)
 
     n = data['X_train'].shape[0]
-    lo_devs, lo_Y_mean, lo_Y_dev = compute_mean_dev(data['X_train'][0 : n - k, :], data['Y_train'][0 : n - k, :])
-    lo_init_params = create_params(lo_devs, mean = lo_Y_mean, sn = lo_Y_dev)
-    no_ij_params = leave_out_optimize(copy.deepcopy(lo_init_params), model, data['X_train'], data['Y_train'], mask,
+    #lo_devs, lo_Y_mean, lo_Y_dev = compute_mean_dev(data['X_train'][0 : n - k, :], data['Y_train'][0 : n - k, :])
+    #lo_init_params = create_params(lo_devs, mean = lo_Y_mean, sn = lo_Y_dev)
+    no_ij_params = leave_out_optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], mask,
                                       n_iter = 500, verbose = False)
-    ij_params = leave_out_optimize(copy.deepcopy(lo_init_params), model, data['X_train'], data['Y_train'], mask,
+    ij_params = leave_out_optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], mask,
                          do_IJ = True, MLE_params = copy.deepcopy(MLE_params))
 
     norm_difference = normalized_norm_difference(no_ij_params, ij_params)
+
+    print(norm_difference)
 
