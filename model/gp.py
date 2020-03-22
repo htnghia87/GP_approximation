@@ -119,7 +119,7 @@ class GP(nn.Module):
         grad, hess = compute_derivative(pred_NLL, var, hessian = True)
         var_opt = torch.cat([var[i].data.view(-1) for i in range(len(var))])
         var_ij = var_opt - torch.mm(grad.view(1, -1), torch.inverse(hess)).view(-1)
-        #var_ij[self.x_dim + 1] = var_opt[self.x_dim + 1] # no approximation for mean
+        var_ij[self.x_dim + 1] = var_opt[self.x_dim + 1] # no approximation for mean
         #var_ij[-1] = var_opt[-1] # no approximation for noise
         #var_ij[0 : self.x_dim] = var_opt[0 : self.x_dim]  # no approximation for scales
         return self.IJ_parameter(var_ij)
