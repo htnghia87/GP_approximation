@@ -25,16 +25,19 @@ if __name__ == '__main__':
 
     model = GP(x_dim, devs = devs, Y_mean = Y_mean, Y_dev = Y_dev)
     init_params = model.extract_params()
-    MLE_params = optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], n_iter = 20000, verbose = True)
+    MLE_params = optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], n_iter = 100000, verbose = True)
+
+    #tensor([6.8008e-03, 1.1289e-01, 1.7524e-05, -9.8088e-02])  -- gradient of scale, signal, mean and noise after 20K iterations, only by then they are sort of near zero
 
     #pos_mean, _ = model.predict(data['X_test'], data['X_train'], data['Y_train'])
     #print(rmse(pos_mean, data['Y_test']))
+
 
     n = data['X_train'].shape[0]
     #lo_devs, lo_Y_mean, lo_Y_dev = compute_mean_dev(data['X_train'][0 : n - k, :], data['Y_train'][0 : n - k, :])
     #lo_init_params = create_params(lo_devs, mean = lo_Y_mean, sn = lo_Y_dev)
     no_ij_params = leave_out_optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], mask,
-                                      n_iter = 20000, verbose = False)
+                                      n_iter = 100000, verbose = False)
     ij_params = leave_out_optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], mask,
                          do_IJ = True, MLE_params = copy.deepcopy(MLE_params))
 
