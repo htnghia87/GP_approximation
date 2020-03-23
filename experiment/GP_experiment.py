@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     model = GP(x_dim, devs = devs, Y_mean = Y_mean, Y_dev = Y_dev)
     init_params = model.extract_params()
-    MLE_params = optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], n_iter = 1000, verbose = True)
+    MLE_params = optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], n_iter = 20000, verbose = True)
 
     #pos_mean, _ = model.predict(data['X_test'], data['X_train'], data['Y_train'])
     #print(rmse(pos_mean, data['Y_test']))
@@ -34,10 +34,10 @@ if __name__ == '__main__':
     #lo_devs, lo_Y_mean, lo_Y_dev = compute_mean_dev(data['X_train'][0 : n - k, :], data['Y_train'][0 : n - k, :])
     #lo_init_params = create_params(lo_devs, mean = lo_Y_mean, sn = lo_Y_dev)
     no_ij_params = leave_out_optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], mask,
-                                      n_iter = 1000, verbose = False)
+                                      n_iter = 20000, verbose = False)
     ij_params = leave_out_optimize(copy.deepcopy(init_params), model, data['X_train'], data['Y_train'], mask,
                          do_IJ = True, MLE_params = copy.deepcopy(MLE_params))
 
     norm_difference = normalized_norm_difference(no_ij_params, ij_params)
-    print(norm_difference)
+    print("Normalized Norm Difference: ", norm_difference)
 

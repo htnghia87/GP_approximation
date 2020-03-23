@@ -21,6 +21,7 @@ class GP(nn.Module):
         else:
             self.mean = MeanFunction(c = Y_mean, opt = True)
         self.lik = LikFunction(opt = True)
+        self.NLL_hess = None  # supposed to be cached with the Hessian of the NLL over full training set
 
     def NLL(self, X_train, Y_train):  # X_train (_, x_dim) -- Y_train (_, 1)
         K = self.cov(X_train) + torch.exp(self.lik.noise * 2) * torch.eye(X_train.shape[0]).to(device)
@@ -41,7 +42,7 @@ class GP(nn.Module):
 
     def predictive_NLL(self, X_test, Y_test, X_train, Y_train):
         pos_mean, pos_var = self.predict(X_test, X_train, Y_train)
-        pos_var += torch.eye(X_test.shape[0]).to(device) * torch.exp(2.0 * self.lik.noise)
+        pos_var = pos_var + torch.eye(X_test.shape[0]).to(device) * torch.exp(2.0 * self.lik.noise)
         pos_var_inv = torch.inverse(pos_var)
         n = Y_test.shape[0]
         z = pos_mean - Y_test
@@ -77,6 +78,14 @@ class GP(nn.Module):
                 res.append(param)
         return res
 
+    def cache_NLL_hess(self, X_train, Y_train):
+        model = nn.ModuleList([self.cov, self.mean, self.lik])
+        func = self.NLL(X_train, Y_train)
+        var = list(model.parameters())
+        func.backward(retain_graph = True)
+        _, NLL_hess = compute_derivative(func, var, hessian = True)
+        self.NLL_hess = NLL_hess
+
     def optimize(self, X_train, Y_train, n_iter = 100, verbose = False):
         model = nn.ModuleList([self.cov, self.mean, self.lik])
         optimizer = opt.Adam(model.parameters())
@@ -99,6 +108,7 @@ class GP(nn.Module):
                     GP_loss.backward()
                 optimizer.step()
         print('Done')
+        self.cache_NLL_hess(X_train, Y_train)
         opt_params = self.extract_params()
         return opt_params
 
@@ -111,6 +121,7 @@ class GP(nn.Module):
         return ij_params
 
     def IJ_optimize(self, X_in, Y_in, X_ou, Y_ou):  # assume the current parameters are the MLE
+        assert self.NLL_hess is not None, "MLE solution has not been cached for the IJ approximation"
         model = nn.ModuleList([self.cov, self.mean, self.lik])
         #model = nn.ModuleList([self.cov])
         model.train()
@@ -118,8 +129,8 @@ class GP(nn.Module):
         var = list(model.parameters())
         grad, hess = compute_derivative(pred_NLL, var, hessian = True)
         var_opt = torch.cat([var[i].data.view(-1) for i in range(len(var))])
-        var_ij = var_opt - torch.mm(grad.view(1, -1), torch.inverse(hess)).view(-1)
-        var_ij[self.x_dim + 1] = var_opt[self.x_dim + 1] # no approximation for mean
+        var_ij = var_opt + torch.mm(grad.view(1, -1), torch.inverse(self.NLL_hess - hess)).view(-1)
+        #var_ij[self.x_dim + 1] = var_opt[self.x_dim + 1] # no approximation for mean
         #var_ij[-1] = var_opt[-1] # no approximation for noise
         #var_ij[0 : self.x_dim] = var_opt[0 : self.x_dim]  # no approximation for scales
         return self.IJ_parameter(var_ij)
